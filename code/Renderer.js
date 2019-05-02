@@ -120,13 +120,13 @@ class Texture {
     constructor(gl, texture) {
         this.gl = gl;
         this.texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, this.texture);
         gl.texImage2D(
             gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA,
             gl.UNSIGNED_BYTE,
             document.getElementById(texture)
         );
         
-        gl.bindTexture(gl.TEXTURE_2D, this.texture);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
@@ -151,6 +151,10 @@ class Texture {
 
 class Renderer {
     constructor() {
+        this.chunkMeshes = new Map();
+
+        this.models = new Map();
+
         this.canvas = document.getElementById("glCanvas");
 
         this.gl = this.canvas.getContext("webgl2");
@@ -179,10 +183,6 @@ class Renderer {
 
         this.resizeCanvas(800, 600);
         this.setCam([0, 0, 0], [0, 0, 0]);
-
-        this.chunkMeshes = new Map();
-
-        this.models = new Map();
     }
 
     get opengl() {

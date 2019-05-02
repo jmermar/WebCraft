@@ -247,54 +247,68 @@ class World {
     }
 
     createBorders() {
-        const bs = 16;
-
         var wall = {
-            vertex: [
-                0, bs, 0, 0, 0, -1,
-                bs, bs, 0, 0, 0, -1,
-                bs, 0, 0, 0, 0, -1,
-                0, 0, 0, 0, 0, -1,
-            ],
-            coords: [
-                0, 0,
-                1, 0,
-                1, 1,
-                0, 1
-            ],
-            indices: [
-                0, 1, 2,
-                0, 2, 3,
-            ],
-        };
+            vertex: new Array(this.worldHeight * this.worldLength * 24),
+            coords: new Array(this.worldHeight * this.worldLength * 8),
+            indices: new Array(this.worldHeight * this.worldLength * 6),
+        }
 
-        this.render.loadModel("wall", "wall", wall);
+        const face = [
+            0, 1, 0,
+            1, 1, 0,
+            1, 0, 0,
+            0, 0, 0,
+        ];
 
-        for(var x = 0; x < this.worldLength; x += bs) {
-            for(var y = 0; y < this.worldHeight; y += bs) {
-                this.render.addInstance("wall", {
-                    position: [x + bs, y, 0],
-                    rotation: [0, 180, 0],
-                });
-                this.render.addInstance("wall", {
-                    position: [x, y, this.worldLength],
-                    rotation: [0, 0, 0],
-                });
+        const coord = this.blockMaps.get("glass").sides;
+        const rc = [coord[0] / 16, coord[1] / 16, (coord[0] + 1) / 16, (coord[1] + 1) / 16];
+
+        for(var x = 0; x < this.worldLength; x++) {
+            for(var y = 0; y < this.worldHeight; y++) {
+                const i = y * this.worldLength + x;
+
+                for(var e = 0; e < 4; e++) {
+                    const idx = i * 24 + e * 6;
+                    wall.vertex[idx + 0] = x + face[0 + e * 3];
+                    wall.vertex[idx + 1] = y + face[1 + e * 3];
+                    wall.vertex[idx + 2] = 0 + face[2 + e * 3];
+                    wall.vertex[idx + 3] = 0;
+                    wall.vertex[idx + 4] = 0;
+                    wall.vertex[idx + 5] = -1;
+                }
+
+                wall.indices[i * 6 + 0] = i * 4 + 2; wall.indices[i * 6 + 1] = i * 4 + 1; wall.indices[i * 6 + 2] = i * 4;
+                wall.indices[i * 6 + 3] = i * 4 + 3; wall.indices[i * 6 + 4] = i * 4 + 2; wall.indices[i * 6 + 5] = i * 4;
+
+                wall.coords[i * 8 + 0] = rc[0];  wall.coords[i * 8 + 1] = rc[1];
+                wall.coords[i * 8 + 2] = rc[2];  wall.coords[i * 8 + 3] = rc[1];
+                wall.coords[i * 8 + 4] = rc[2];  wall.coords[i * 8 + 5] = rc[3];
+                wall.coords[i * 8 + 6] = rc[0];  wall.coords[i * 8 + 7] = rc[3];
             }
         }
 
-        for(var z = 0; z < this.worldLength; z += bs) {
-            for(var y = 0; y < this.worldHeight; y += bs) {
-                this.render.addInstance("wall", {
-                    position: [0, y, z],
-                    rotation: [0, -90, 0],
-                });
-                this.render.addInstance("wall", {
-                    position: [this.worldLength, y, z + bs],
-                    rotation: [0, 90, 0],
-                });
-            }
-        }
+        this.render.loadModel("wall", "atlas", wall);
+
+        this.render.addInstance("wall", {
+            position: [0, 0, 0],
+            rotation: [0, 0, 0],
+        });
+
+        this.render.addInstance("wall", {
+            position: [this.worldLength, 0, this.worldLength],
+            rotation: [0, 180, 0],
+        });
+
+        this.render.addInstance("wall", {
+            position: [this.worldLength, 0, 0],
+            rotation: [0, -90, 0],
+        });
+
+        this.render.addInstance("wall", {
+            position: [0, 0, this.worldLength],
+            rotation: [0, 90, 0],
+        });
+        
     }
 
     placePlayer() {
@@ -389,15 +403,23 @@ class World {
 }
 
 function main() {
+    document.getElementById("main_menu").hidden = true;
+    document.getElementById("gen_info").hidden = false;
+    var gen_info = document.getElementById("gen_info");
+
     var render = new Renderer();
     const maxFPS = 60;
     Input.init();
 
-    var world = new World(10, 8, render);
+    const size = parseInt(document.getElementById("world_size").value);
+    var world = new World(size, 8, render);
 
     world.generateTerrain(function() {
-        console.log("Generating world, progres: " + world.progress * 100);
+        gen_info.innerText = "Generating world.\nProgres: " + Math.floor(world.progress * 100) + "%.";
     }, function() {
+        gen_info.hidden = true;
+        document.getElementById("glCanvas").hidden = false;
+        world.generateBor
         world.autoLoadChunks();
         var last = Date.now();
 
@@ -414,7 +436,6 @@ function main() {
 
             imp++;
             if (imp >= 20) {
-                console.log( 1 / delta);
                 imp = 0;
             }
 
@@ -425,5 +446,3 @@ function main() {
         requestAnimationFrame(draw);
     });
 }
-
-main();
