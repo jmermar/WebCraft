@@ -17,6 +17,14 @@ blocks = [
         sides: [0, 0],
     },
     {
+        name: "water",
+        nocoll: true,
+        transparent: true,
+        top: [3, 0],
+        bottom: [3, 0],
+        sides: [3, 0],
+    },
+    {
         name: "grass",
         top: [0, 3],
         bottom: [0, 0],

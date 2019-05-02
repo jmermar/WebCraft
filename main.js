@@ -352,17 +352,22 @@ class World {
     }
 
     generateChunk(cx, cz) {
+        const waterLevel = 47;
         for (var x = cx * this.cl; x < (cx + 1) * this.cl; x++) {
             for (var z = cz * this.cl; z < (cz + 1) * this.cl; z++) {
-                var h = Math.floor(50 + noise.simplex2(x / 32, z / 32) * 2);
+                var h = Math.floor(50 + noise.simplex2(x / 50, z / 50) * 6);
                 for (var y = 0; y < this.worldHeight; y++) {
                     var n3d = noise.simplex3(x/16, y/10, z/16);
-                    if (n3d > -0.5 || y  == 0) {
+                    if (y == 0) this.setBlock(x, y, z, "stone");
+                    else if (n3d > -0.5) {
                         if (y == h) this.setBlock(x, y, z, "grass");
                         else if (y < h && y > h - 5) this.setBlock(x, y, z, "dirt");
                         else if (y <= h - 5) this.setBlock(x, y, z, "stone");
+                        else if(y <= waterLevel && n3d > -0.5) this.setBlock(x, y, z, "water");
                         else this.setBlock(x, y, z, "air");
-                    } else this.setBlock(x, y, z, "air");
+                    } else {
+                        this.setBlock(x, y, z, "air");
+                    }
                 }
             }
         }
