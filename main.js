@@ -1,3 +1,34 @@
+class Raycast {
+    constructor(world, position, dir, max) {
+        this.world = world;
+        this.position = position.slice(0);
+        this.dir = new Array(3);
+        this.max = max;
+        vec3.normalize(this.dir, dir);
+    }
+
+    getBlock(step) {
+        var block = null;
+        var pos = this.position.slice();
+        var bx, by, bz;
+        var dir = new Array(3);
+        vec3.scale(dir, this.dir, step);
+        for(var i = 0; i < this.max; i += step) {
+            vec3.add(pos, pos, dir);
+            bx = Math.floor(pos[0]);
+            by = Math.floor(pos[1]);
+            bz = Math.floor(pos[2]);
+            block = world.getBlock(bx, by, bz);
+            if (!block.air) break;
+        }
+
+        if (!block.air) return {
+            block: block,
+            position: [bx, by, bz],
+        }; else return null;
+    }
+}
+
 class Player {
     constructor(world, position, rotation) {
         this.world = world;
@@ -9,6 +40,7 @@ class Player {
         this.height = 1.9;
         this.vspeed = 0.0;
         this.collision = true;
+        this.movingCamera = false;
 
         this.setGravityAndJump(1.2, 0.5);
     }
@@ -24,7 +56,6 @@ class Player {
         var iy = 0;
         var iz = 0;
 
-        this.vspeed -= this.gravity * delta;
         if (Input.keypress("w")) {
             iz -= Math.cos(glMatrix.toRadian(angle)) * delta * this.speed;
             ix += Math.sin(glMatrix.toRadian(angle)) * delta * this.speed;
@@ -45,25 +76,52 @@ class Player {
             ix -= Math.cos(glMatrix.toRadian(angle)) * delta * this.speed / 2;
         }
 
-        if (Input.keypress("jump") && this.ground) {
-            this.vspeed = this.jumpSpeed;
-        }
 
-        iy += this.vspeed * delta;
+
+        if (this.collision) {
+            this.vspeed -= this.gravity * delta;
+            if (Input.keypress("jump") && this.ground) {
+                this.vspeed = this.jumpSpeed;
+            }
+            iy += this.vspeed * delta;
+        } else {
+            if (Input.keypress("jump")) {
+                iy += this.speed * delta;;
+            }
+            if (Input.keypress("shift")) {
+                iy -= this.speed * delta;;
+            }
+        }
 
         if (Input.keypress("noclip")) {
             this.collision = false;
+            this.vspeed = 0;
         }
 
         if (Input.keypress("physics")) {
             this.collision = true;
         }
 
-        if (Input.mousePressed) {
+        if (Input.mousePressed != 0) {
+            this.pressing = true;
+            if (Math.abs(Input.deltaX) - 2 > 0 || Math.abs(Input.deltaY) - 2 > 0) this.movingCamera = true;
             this.rot[1] += Input.deltaX * delta * this.rotSpeed;
             this.rot[0] += Input.deltaY * delta * this.rotSpeed;
             if (this.rot[0] < -75) this.rot[0] = -75;
             if (this.rot[0] > 75) this.rot[0] = 75;
+        } else if (Input.mousePressed == 0) {
+            if (!this.movingCamera && this.pressing) {
+                var pCoords = world.render.screenToWorld(Input.mouseX, Input.mouseY);
+                vec3.sub(pCoords, pCoords, this.eyePos);
+                var rcast = new Raycast(world, this.eyePos, pCoords, 10);
+                var block = rcast.getBlock(0.05);
+                if (block != null) {
+                    //console.log(block.position);
+                    world.setBlock(block.position[0], block.position[1], block.position[2], "air");
+                }
+            }
+            this.pressing = false;
+            this.movingCamera = false;
         }
 
         if (this.collision == true) {
@@ -352,22 +410,22 @@ class World {
     }
 
     generateChunk(cx, cz) {
-        const waterLevel = 47;
+        const waterLevel = 49;
         for (var x = cx * this.cl; x < (cx + 1) * this.cl; x++) {
             for (var z = cz * this.cl; z < (cz + 1) * this.cl; z++) {
-                var h = Math.floor(50 + noise.simplex2(x / 50, z / 50) * 6);
+                var h = Math.floor(50 + noise.simplex2(x / 50, z / 50) * 4);
                 for (var y = 0; y < this.worldHeight; y++) {
-                    var n3d = noise.simplex3(x/16, y/10, z/16);
-                    if (y == 0) this.setBlock(x, y, z, "stone");
-                    else if (n3d > -0.5) {
-                        if (y == h) this.setBlock(x, y, z, "grass");
-                        else if (y < h && y > h - 5) this.setBlock(x, y, z, "dirt");
-                        else if (y <= h - 5) this.setBlock(x, y, z, "stone");
-                        else if(y <= waterLevel && n3d > -0.5) this.setBlock(x, y, z, "water");
-                        else this.setBlock(x, y, z, "air");
-                    } else {
-                        this.setBlock(x, y, z, "air");
-                    }
+                    var n3d = noise.simplex3(x/16, y/10, z/16) + (y / h) * 0.8;
+                    var block = "air"
+                    if (y == h) block = "grass";
+                    else if (y < h && y > h - 5) block = "dirt";
+                    else if (y <= h - 5) block = "stone";
+                    else if(y <= waterLevel) block = "water";
+
+                    if (n3d < 0.2 && block != "water") block = "air";
+                    if (y== 0) block = "stone";
+
+                    this.setBlock(x, y, z, block);
                 }
             }
         }
@@ -381,12 +439,23 @@ class World {
         return blocks[this.map[y * this.worldLength * this.worldLength + z * this.worldLength + x]];
     }
 
+    updateChunk(x, y, z) {
+        var chunk = this.chunks.get(this.chunkHash(x, y, z));
+        if (chunk != null) {
+            chunk.dirty = true;
+        }
+    }
+
     setBlock(x, y, z, block) {
         if (x < 0 || x >= this.cl * this.size) return;
         if (z < 0 || z >= this.cl * this.size) return;
         if (y < 0 || y >= this.cl * this.height) return;
 
         this.map[y * this.worldLength * this.worldLength + z * this.worldLength + x] = this.blockMaps.get(block).id;
+        var cx = Math.floor(x / this.cl);
+        var cy = Math.floor(y / this.cl);
+        var cz = Math.floor(z / this.cl);
+        this.updateChunk(cx, cy, cz);
     }
 
     update(delta) {
@@ -407,6 +476,8 @@ class World {
     }
 }
 
+var world = null;
+
 function main() {
     document.getElementById("main_menu").hidden = true;
     document.getElementById("gen_info").hidden = false;
@@ -417,7 +488,7 @@ function main() {
     Input.init();
 
     const size = parseInt(document.getElementById("world_size").value);
-    var world = new World(size, 8, render);
+    world = new World(size, 8, render);
 
     world.generateTerrain(function() {
         gen_info.innerText = "Generating world.\nProgres: " + Math.floor(world.progress * 100) + "%.";

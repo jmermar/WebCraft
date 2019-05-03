@@ -180,6 +180,7 @@ class Renderer {
         this.pMatrix = new Float32Array(16);
         this.mvMatrix = new Float32Array(16);
         this.vMatrix = new Float32Array(16);
+        this.sToWorld = new Float32Array(16);
 
         this.resizeCanvas(800, 600);
         this.setCam([0, 0, 0], [0, 0, 0]);
@@ -289,7 +290,12 @@ class Renderer {
                     }
                     
                     if (!block.air) {
-                        if (world.getBlock(bx - 1, by, bz).transparent == true) {
+                        var condition = null;
+                        if (block.transparent) {condition = function(ablock) { return ablock.name != block.name || ablock.air == true;};
+                        } else condition = function(ablock) {
+                            return ablock.transparent == true;
+                        };
+                        if (condition(world.getBlock(bx - 1, by, bz))) {
                             addFace([
                                 0, 1, 1,
                                 0, 1, 0,
@@ -298,7 +304,7 @@ class Renderer {
                             ], block.sides, [-1, 0, 0]);
                         }
 
-                        if (world.getBlock(bx + 1, by, bz).transparent == true) {
+                        if (condition(world.getBlock(bx + 1, by, bz))) {
                             addFace([
                                 1, 1, 0,
                                 1, 1, 1,
@@ -307,7 +313,7 @@ class Renderer {
                             ], block.sides, [+1, 0, 0]);
                         }
 
-                        if (world.getBlock(bx, by, bz - 1).transparent == true) {
+                        if (condition(world.getBlock(bx, by, bz - 1))) {
                             addFace([
                                 0, 1, 0,
                                 1, 1, 0,
@@ -316,7 +322,7 @@ class Renderer {
                             ], block.sides, [0, 0, -1]);
                         }
 
-                        if (world.getBlock(bx, by, bz + 1).transparent == true) {
+                        if (condition(world.getBlock(bx, by, bz + 1))) {
                             addFace([
                                 1, 1, 1,
                                 0, 1, 1,
@@ -325,7 +331,7 @@ class Renderer {
                             ], block.sides, [0, 0, 1]);
                         }
 
-                        if (world.getBlock(bx, by + 1, bz).transparent == true) {
+                        if (condition(world.getBlock(bx, by + 1, bz))) {
                             addFace([
                                 0, 1, 1,
                                 1, 1, 1,
@@ -334,7 +340,7 @@ class Renderer {
                             ], block.top, [0, 1, 0]);
                         }
 
-                        if (world.getBlock(bx, by - 1, bz).transparent == true) {
+                        if (condition(world.getBlock(bx, by - 1, bz))) {
                             addFace([
                                0, 0, 0,
                                1, 0, 0,
@@ -379,6 +385,18 @@ class Renderer {
         mat4.rotate(this.vMatrix, this.vMatrix, glMatrix.toRadian(rotation[2]), [0, 0, 1]);
 
         mat4.translate(this.vMatrix, this.vMatrix, desp);
+
+        var pvMatrix = new Float32Array(16);
+        mat4.multiply(pvMatrix, this.pMatrix, this.vMatrix);
+
+        mat4.invert(this.sToWorld, pvMatrix);
+    }
+
+    screenToWorld(x, y) {
+        var vec = [2 * (x/this.canvas.width) - 1, 2 * -(y/this.canvas.height) +1, 0, 1.0];
+        
+        vec4.transformMat4(vec, vec, this.sToWorld);
+        return [vec[0] / vec[3], vec[1] / vec[3], vec[2] / vec[3]];
     }
 
     render() {
