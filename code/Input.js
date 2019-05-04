@@ -1,116 +1,112 @@
-maps = {
-    "w": 87,
-    "s": 83,
-    "jump": 32,
-    "shift": 16,
-    "a": 65,
-    "d": 68,
-    "noclip": 78,
-    "physics": 70,
-};
-
-mx = 0;
-my = 0;
-ax = mx;
-ay = my;
-dx = 0;
-dy = 0;
-mp = false;
-mrp = false;
-ms = 0;
-mrs = false;
-
-state = {}
-
-cx = 0
-cy = 0;
-
 class Input {
-    static init() {
-        document.addEventListener("keydown", Input.keydown);
-        document.addEventListener("keyup", Input.keyup);
-        document.getElementById("glCanvas").addEventListener("mousemove", Input.movemouse);
-        document.getElementById("glCanvas").addEventListener("mousedown", Input.mousedown);
-        document.getElementById("glCanvas").addEventListener("mouseup", Input.mouseup);
+    constructor() {
+        this.maps = {
+            "w": 87,
+            "s": 83,
+            "jump": 32,
+            "shift": 16,
+            "a": 65,
+            "d": 68,
+            "noclip": 78,
+            "physics": 70,
+        };
+        this.mx = 0;
+        this.my = 0;
+        this.ax = this.mx;
+        this.ay = this.my;
+        this.dx = 0;
+        this.dy = 0;
+        this.mp = false;
+        this.mrp = false;
+        this.ms = 0;
+        this.mrs = false;
+        this.state = {};
+        this.cx = 0;
+        this.cy = 0;
+
+        document.addEventListener("keydown", this.keydown.bind(this));
+        document.addEventListener("keyup", this.keyup.bind(this));
+        document.getElementById("glCanvas").addEventListener("mousemove", this.movemouse.bind(this));
+        document.getElementById("glCanvas").addEventListener("mousedown", this.mousedown.bind(this));
+        document.getElementById("glCanvas").addEventListener("mouseup", this.mouseup.bind(this));
     }
 
-    static keypress(key) {
-        var code = maps[key];
+    keypress(key) {
+        var code = this.maps[key];
         if (code == undefined || null) return false;
-        var s = state[code];
+        var s = this.state[code];
         if (s == undefined || null) {
-            state[code] = false;
+            this.state[code] = false;
             return false;
         }
         return s;
     }
 
-    static update() {
+    update() {
         var rect = document.getElementById("glCanvas").getBoundingClientRect();
-        cx = rect.x;
-        cy = rect.y;
-
-        dx = mx - ax;
-        dy = my - ay;
-        ay = my;
-        ax = mx;
-        if (mp) {
-            ms = ms == 0 ? 1 : -1;
+        this.cx = rect.x;
+        this.cy = rect.y;
+        this.dx = this.mx - this.ax;
+        this.dy = this.my - this.ay;
+        this.ay = this.my;
+        this.ax = this.mx;
+        if (this.mp) {
+            this.ms = this.ms == 0 ? 1 : -1;
         } else {
-            ms = 0;
+            this.ms = 0;
         }
 
-        if (mrp) {
-            mrs = mrs == 0 ? 1 : -1;
+        if (this.mrp) {
+            this.mrs = this.mrs == 0 ? 1 : -1;
         } else {
-            mrs = 0;
+            this.mrs = 0;
         }
     }
 
-    static get mouseX() {
-        return mx - cx;
+    get mouseX() {
+        return this.mx - this.cx;
     }
 
-    static get mouseY() {
-        return my - cy;
+    get mouseY() {
+        return this.my - this.cy;
     }
 
-    static get deltaX() {
-        return dx;
+    get deltaX() {
+        return this.dx;
     }
 
-    static get deltaY() {
-        return dy;
+    get deltaY() {
+        return this.dy;
     }
 
-    static get mousePressed() {
-        return ms;
+    get mousePressed() {
+        return this.ms;
     }
 
-    static get mouseRightPressed() {
-        return mrs;
+    get mouseRightPressed() {
+        return this.mrs;
     }
     
-    static keydown(key) {
-        state[key.keyCode] = true;
+    keydown(key) {
+        this.state[key.keyCode] = true;
     }
     
-    static keyup(key) {
-        state[key.keyCode] = false;
+    keyup(key) {
+        this.state[key.keyCode] = false;
     }
 
-    static movemouse(mouse) {
-        mx = mouse.clientX;
-        my = mouse.clientY;
+    movemouse(mouse) {
+        this.mx = mouse.clientX;
+        this.my = mouse.clientY;
     }
 
-    static mousedown(mouse) {
-        if (mouse.button == 0) mp = true;
-        if (mouse.button == 2) mrp = true;
+    mousedown(mouse) {
+        if (mouse.button == 0) this.mp = true;
+        if (mouse.button == 2) this.mrp = true;
     }
 
-    static mouseup(mouse) {
-        if (mouse.button == 0) mp = false;
-        if (mouse.button == 2) mrp = false;
+    mouseup(mouse) {
+        if (mouse.button == 0) this.mp = false;
+        if (mouse.button == 2) this.mrp = false;
     }
 };

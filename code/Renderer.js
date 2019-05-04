@@ -230,7 +230,7 @@ class Renderer {
 
     resizeCanvas(w, h) {
         mat4.perspective(this.pMatrix,
-            glMatrix.toRadian(45),
+            glMatrix.toRadian(90),
             w / h,
             0.1, 1000);
 

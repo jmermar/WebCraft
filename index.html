@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head></head>
-    <body onunload="rm.free();">
+    <body onunload="if(rm != null) rm.free();">
         <img id="atlas" src="Textures/atlas.png" width="0" height="0" crossorigin="anonymous"></img>
         <img id="wall" src="Textures/wall.png" width="0" height="0" crossorigin="anonymous"></img>
         <div id="center">
@@ -34,6 +34,9 @@
         <script src="code/Physics.js"></script>
         <script src="code/ResourceManager.js"></script>
         <script src="code/Renderer.js"></script>
+        <script src="code/GUI.js"></script>
+        <script src="code/Player.js"></script>
+        <script src="code/World.js"></script>
         <script src="code/Input.js"></script>
         <script src="main.js"></script>
 
