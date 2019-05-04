@@ -1,5 +1,5 @@
 var global = {
-    selector: ["grass", "dirt", "stone", "glass", "sand", "wood", "leaf", "snowgrass", "snow"],
+    selector: ["dirt", "stone", "glass", "sand", "wood", "leaf", "bricks", "planks", "water"],
 }
 
 var rm = null;

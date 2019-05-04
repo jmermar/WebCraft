@@ -5,6 +5,8 @@ class World {
         this.size = size;
         this.height = height;
         this.renderDistance = 8;
+        this.updateTicks = 4;
+        this.updateWait = 0;
 
         this.cl = 16;
 
@@ -19,6 +21,8 @@ class World {
         this.map = new Int16Array(this.numChunks * this.chunkVolume);
 
         this.chunks = new Map();
+
+        this.refresh = new Array();
 
         this.createBorders();
     }
@@ -311,7 +315,7 @@ class World {
         }
     }
 
-    setBlock(x, y, z, block) {
+    setBlock(x, y, z, block, refresh) {
         if (x < 0 || x >= this.cl * this.size) return;
         if (z < 0 || z >= this.cl * this.size) return;
         if (y < 0 || y >= this.cl * this.height) return;
@@ -327,11 +331,120 @@ class World {
         if (x % this.cl - 1) this.updateChunk(cx + 1, cy, cz);
         if (y % this.cl - 1) this.updateChunk(cx, cy + 1, cz);
         if (z % this.cl - 1) this.updateChunk(cx, cy, cz + 1);
+        if (refresh) {
+            this.refresh.push([x, y, z]);
+            this.refresh.push([x - 1, y, z]);
+            this.refresh.push([x, y - 1, z]);
+            this.refresh.push([x, y, z - 1]);
+            this.refresh.push([x + 1, y, z]);
+            this.refresh.push([x, y + 1, z]);
+            this.refresh.push([x, y, z + 1]);
+        }
+    }
+
+    refreshBlock(x, y, z) {
+        var block = this.getBlock(x, y, z);
+        if (block.name == "sand") {
+            if (this.getBlock(x, y - 1, z).nocoll) {
+                var ny = y - 1;
+                while(this.getBlock(x, ny - 1, z).nocoll) ny--;
+                this.setBlock(x, y, z, "air", true);
+                this.setBlock(x, ny, z, "sand", true);
+            }
+        } else if (block.name == "water") {
+            if (this.getBlock(x - 1, y, z).air) this.setBlock(x - 1, y, z, "water", true);
+            if (this.getBlock(x + 1, y, z).air) this.setBlock(x + 1, y, z, "water", true);
+            if (this.getBlock(x, y - 1, z).air) this.setBlock(x, y - 1, z, "water", true);
+            if (this.getBlock(x, y, z - 1).air) this.setBlock(x, y, z - 1, "water", true);
+            if (this.getBlock(x, y, z + 1).air) this.setBlock(x, y, z + 1, "water", true);
+        } else if (block.name == "grass") {
+            if (!this.getBlock(x, y + 1, z).transparent) this.setBlock(x, y, z, "dirt", true);
+        } else if (block.name == "dirt") {
+            if (this.getBlock(x, y + 1, z).transparent) {
+                for (var i = y - 1; i <= y + 1; i++) {
+                    var b1 = this.getBlock(x - 1, i, z).name;
+                    var b2 = this.getBlock(x + 1, i, z).name;
+                    var b3 = this.getBlock(x, i, z + 1).name;
+                    var b4 = this.getBlock(x, i, z - 1).name;
+    
+                    if (b1 == "grass") {
+                        this.setBlock(x, y, z, "grass", true);
+                        break;
+                    }
+                    if (b2 == "grass") {
+                        this.setBlock(x, y, z, "grass", true);
+                        break;
+                    }
+                    if (b3 == "grass") {
+                        this.setBlock(x, y, z, "grass", true);
+                        break;
+                    }
+                    if (b4 == "grass") {
+                        this.setBlock(x, y, z, "grass", true);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    updateBlock(x, y, z) {
+        var block = this.getBlock(x, y, z);
+        if (block.name == "dirt") {
+            for (var i = y - 1; i <= y + 1; i++) {
+                var b1 = this.getBlock(x - 1, i, z).name;
+                var b2 = this.getBlock(x + 1, i, z).name;
+                var b3 = this.getBlock(x, i, z + 1).name;
+                var b4 = this.getBlock(x, i, z - 1).name;
+
+                var a1 = this.getBlock(x - 1, i + 1, z);
+                var a2 = this.getBlock(x + 1, i + 1, z);
+                var a3 = this.getBlock(x, i + 1, z + 1);
+                var a4 = this.getBlock(x, i + 1, z - 1);
+
+                if (b1 == "grass" && a1.transparent) {
+                    this.setBlock(x, y, z, "grass", true);
+                    break;
+                }
+                if (b2 == "grass" && a2.transparent) {
+                    this.setBlock(x, y, z, "grass", true);
+                    break;
+                }
+                if (b3 == "grass" && a3.transparent) {
+                    this.setBlock(x, y, z, "grass", true);
+                    break;
+                }
+                if (b4 == "grass" && a4.transparent) {
+                    this.setBlock(x, y, z, "grass", true);
+                    break;
+                }
+            }
+        }
     }
 
     update(delta) {
         var t = this;
+        var update = false;
+        this.updateWait += delta;
+        if (this.updateWait >= 1 / this.updateTicks) {
+            update = false;
+            this.updateWait = 0;
+        }
+        var r = this.refresh;
+        this.refresh = [];
+        if (r.length > 0) {
+            r.forEach(function(val) {
+                t.refreshBlock(val[0], val[1], val[2]);
+            });
+        }
+
         this.chunks.forEach(function(value, key, map) {
+            if (update) {
+                var bx = value.position[0] * t.cl + Math.floor(Math.random() * t.cl);
+                var by = value.position[1] * t.cl + Math.floor(Math.random() * t.cl);
+                var bz = value.position[2] * t.cl + Math.floor(Math.random() * t.cl);
+                t.updateBlock(bx, by, bz);
+            }
             if(value.dirty) {
                 value.dirty = false;
                 t.render.generateChunkMesh(t, value.position);

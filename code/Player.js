@@ -51,7 +51,7 @@ class Player {
                 if (this.rBlock != null && this.pressing) {
                     world.setBlock(this.rBlock.position[0],
                         this.rBlock.position[1],
-                        this.rBlock.position[2], "air");
+                        this.rBlock.position[2], "air", true);
                 }
             }
             this.pressing = false;
@@ -71,7 +71,7 @@ class Player {
                     this.rBlock.position[0] + this.rBlock.normal[0],
                     this.rBlock.position[1] + this.rBlock.normal[1],
                     this.rBlock.position[2] + this.rBlock.normal[2],
-                    this.buildBlock);
+                    this.buildBlock, true);
             }
         }
 

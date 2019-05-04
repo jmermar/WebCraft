@@ -79,7 +79,7 @@ class Raycast {
             by = Math.floor(newPos[1]);
             bz = Math.floor(newPos[2]);
             block = world.getBlock(bx, by, bz);
-            if (!block.air) break;
+            if (!block.nocoll) break;
             pos = newPos.slice(0);
         }
 
@@ -87,7 +87,7 @@ class Raycast {
         var ny = Math.floor(pos[1]) - by;
         var nz = Math.floor(pos[2]) - bz;
 
-        if (!block.air) return {
+        if (!block.nocoll) return {
             block: block,
             position: [bx, by, bz],
             normal: [nx, ny, nz],
