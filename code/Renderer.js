@@ -1,154 +1,3 @@
-class Mesh {
-    constructor(gl, vertex, texCoords, indices) {
-        this.gl = gl;
-        this.vao = gl.createVertexArray();
-        this.len = indices.length;
-        gl.bindVertexArray(this.vao);
-
-        this.eb = gl.createBuffer();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.eb);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), gl.STATIC_DRAW);
-
-        this.vertex = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertex);
-
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertex), gl.STATIC_DRAW);
-
-        gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 6 * 4, 0);
-        gl.enableVertexAttribArray(0);
-
-        gl.vertexAttribPointer(1, 3, gl.FLOAT, true, 6 * 4, 12);
-        gl.enableVertexAttribArray(1);
-
-        this.txt = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.txt);
-
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texCoords), gl.STATIC_DRAW);
-
-        gl.vertexAttribPointer(2, 2, gl.FLOAT, true, 0, 0);
-        gl.enableVertexAttribArray(2);
-
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.eb);
-        gl.bindBuffer(gl.ARRAY_BUFFER, null);
-        gl.bindVertexArray(null);
-    }
-
-    free() {
-        this.gl.deleteBuffer(this.txt);
-        this.gl.deleteBuffer(this.eb);
-        this.gl.deleteBuffer(this.vertex);
-        this.gl.deleteVertexArray(this.vao);
-        this.vertex = null;
-        this.vao = null;
-        this.eb = null;
-        this.txt = null;
-    }
-
-    bind() {
-        this.gl.bindVertexArray(this.vao);
-    }
-
-    unbind() {
-        this.gl.bindVertexArray(null);
-    }
-
-    draw() {
-        this.gl.drawElements(this.gl.TRIANGLES, this.len, this.gl.UNSIGNED_INT, 0);
-    }
-}
-
-function loadShader(gl, type, source) {
-
-    reader = new FileReader();
-
-    const shader = gl.createShader(type);
-
-    gl.shaderSource(shader, source);
-
-    gl.compileShader(shader);
-
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        alert("Cannot create shader: "+ gl.getShaderInfoLog(shader));
-        gl.deleteShader(shader);
-        return null;
-    }
-
-    return shader;
-}
-
-class Shader {
-    constructor(gl, vertexSRC, fragmentSRC) {
-        this.gl = gl;
-        this.vertex = loadShader(gl, gl.VERTEX_SHADER, vertexSRC);
-        this.fragment = loadShader(gl, gl.FRAGMENT_SHADER, fragmentSRC);
-
-        this.program = gl.createProgram();
-        gl.attachShader(this.program, this.vertex);
-        gl.attachShader(this.program, this.fragment);
-        gl.linkProgram(this.program);
-
-        if (!gl.getProgramParameter(this.program, gl.LINK_STATUS)) {
-            alert("Cannot link program " + gl.getProgramInfoLog(shaderProgram));
-            gl.deleteProgram(this.program);
-            return null;
-          }
-    }
-
-    free() {
-        this.gl.deleteShader(this.vertex);
-        this.gl.deleteShader(this.fragment);
-        this.gl.deleteProgram(this.program);
-        this.vertex = null;
-        this.fragment = null;
-        this.program = null;
-    }
-
-    bind() {
-        this.gl.useProgram(this.program);
-    }
-
-    unbind() {
-        this.gl.useProgram(null);
-    }
-
-    getUniform(v) {
-        return this.gl.getUniformLocation(this.program, v);
-    }
-}
-
-class Texture {
-    constructor(gl, texture) {
-        this.gl = gl;
-        this.texture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, this.texture);
-        gl.texImage2D(
-            gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA,
-            gl.UNSIGNED_BYTE,
-            document.getElementById(texture)
-        );
-        
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-
-        gl.bindTexture(gl.TEXTURE_2D, null);
-    }
-
-    free() {
-        this.gl.deleteTexture(this.texture);
-        this.texture = null;
-    }
-
-    bind() {
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
-    }
-
-    unbind() {
-        this.gl.bindTexture(this.gl.TEXTURE_2D, null);
-    }
-}
-
 class Renderer {
     constructor() {
         this.chunkMeshes = new Map();
@@ -163,9 +12,11 @@ class Renderer {
             return;
         }
 
-        this.altas = new Texture(this.gl, "atlas");
+        rm = new ResourceManager(this.gl);
 
-        this.shader = new Shader(this.gl, basic_vertex, basic_fragment);
+        this.altas = rm.getTexture("atlas");
+
+        this.shader = rm.createShader("normal", basic_vertex, basic_fragment);
         this.mUniform = this.shader.getUniform("modelMatrix");
         this.vUniform = this.shader.getUniform("viewMatrix");
         this.pUniform = this.shader.getUniform("projMatrix");
@@ -199,8 +50,8 @@ class Renderer {
         }
 
         model = {
-            mesh: new Mesh(this.gl, data.vertex, data.coords, data.indices),
-            tex: new Texture(this.gl, texture),
+            mesh: rm.createMesh(name + "_m", data),
+            tex: rm.getTexture(texture),
             instances: new Set(),
         }
 
@@ -211,8 +62,7 @@ class Renderer {
         var model = this.models.get(name);
 
         if (model != null) {
-            model.mesh.free();
-            model.tex.free();
+            rm.freeMesh(name + "_m");
 
             this.models.delete(model);
         }
@@ -243,16 +93,17 @@ class Renderer {
         var chunk = this.chunkMeshes.get(hash);
 
         if (chunk != null) {
-            chunk.mesh.free();
+            rm.freeMesh(hash);
         }
 
         this.chunkMeshes.delete(hash)
     }
 
     generateChunkMesh(world, position) {
-        var chunk = this.chunkMeshes.get(world.chunkHash(position[0], position[1], position[2]));
+        const hash = world.chunkHash(position[0], position[1], position[2]);
+        var chunk = this.chunkMeshes.get(hash);
         if (chunk != undefined ) {
-            chunk.mesh.free();
+            rm.freeMesh(hash);
         }
 
         var vertex = [];
@@ -291,10 +142,16 @@ class Renderer {
                     
                     if (!block.air) {
                         var condition = null;
-                        if (block.transparent) {condition = function(ablock) { return ablock.name != block.name || ablock.air == true;};
-                        } else condition = function(ablock) {
-                            return ablock.transparent == true;
-                        };
+                        if (block.transparent) {
+                            condition = function(ablock) { 
+                                if (ablock.transparent) return ablock.name != block.name;
+                                else return ablock.air;
+                            };
+                        } else {
+                            condition = function(ablock) {
+                                return ablock.transparent == true;
+                            };
+                        }
                         if (condition(world.getBlock(bx - 1, by, bz))) {
                             addFace([
                                 0, 1, 1,
@@ -353,6 +210,12 @@ class Renderer {
             }
         }
 
+        var data = {
+            vertex: vertex,
+            indices: indices,
+            coords: coords,
+        }
+
         if (indices.length == 0) return;
 
         var model = new Float32Array(16);
@@ -361,7 +224,7 @@ class Renderer {
         mat4.translate(model, model, [position[0] * world.cl, position[1] * world.cl, position[2] * world.cl]);
         this.chunkMeshes.set(world.chunkHash(position[0], position[1], position[2]), {
             model : model,
-            mesh : new Mesh(this.gl, vertex, coords, indices)
+            mesh : rm.createMesh(hash, data),
         });
     }
 

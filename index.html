@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head></head>
-    <body>
+    <body onunload="rm.free();">
         <img id="atlas" src="Textures/atlas.png" width="0" height="0" crossorigin="anonymous"></img>
         <img id="wall" src="Textures/wall.png" width="0" height="0" crossorigin="anonymous"></img>
         <div id="center">
@@ -23,12 +23,13 @@
             </div>
         </div>
 
-        <canvas id="glCanvas" width="640" height="480" style="position: absolute; top: 0; left:0" hidden></canvas>
+        <canvas id="glCanvas" oncontextmenu="return false;" width="640" height="480" style="position: absolute; top: 0; left:0" hidden></canvas>
         <script src="lib/matrix.js"></script>
         <script src="lib/perlin.js"></script>
         <script src="code/shader_sources.js"></script>
         <script src="blocks.js"></script>
         <script src="code/Physics.js"></script>
+        <script src="code/ResourceManager.js"></script>
         <script src="code/Renderer.js"></script>
         <script src="code/Input.js"></script>
         <script src="main.js"></script>

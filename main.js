@@ -1,34 +1,3 @@
-class Raycast {
-    constructor(world, position, dir, max) {
-        this.world = world;
-        this.position = position.slice(0);
-        this.dir = new Array(3);
-        this.max = max;
-        vec3.normalize(this.dir, dir);
-    }
-
-    getBlock(step) {
-        var block = null;
-        var pos = this.position.slice();
-        var bx, by, bz;
-        var dir = new Array(3);
-        vec3.scale(dir, this.dir, step);
-        for(var i = 0; i < this.max; i += step) {
-            vec3.add(pos, pos, dir);
-            bx = Math.floor(pos[0]);
-            by = Math.floor(pos[1]);
-            bz = Math.floor(pos[2]);
-            block = world.getBlock(bx, by, bz);
-            if (!block.air) break;
-        }
-
-        if (!block.air) return {
-            block: block,
-            position: [bx, by, bz],
-        }; else return null;
-    }
-}
-
 class Player {
     constructor(world, position, rotation) {
         this.world = world;
@@ -122,6 +91,20 @@ class Player {
             }
             this.pressing = false;
             this.movingCamera = false;
+        }
+        if (Input.mouseRightPressed == 1) {
+            var pCoords = world.render.screenToWorld(Input.mouseX, Input.mouseY);
+            vec3.sub(pCoords, pCoords, this.eyePos);
+            var rcast = new Raycast(world, this.eyePos, pCoords, 10);
+            var block = rcast.getBlock(0.05);
+            if (block != null) {
+                //console.log(block.position);
+                world.setBlock(
+                    block.position[0] + block.normal[0],
+                    block.position[1] + block.normal[1],
+                    block.position[2] + block.normal[2],
+                    "stone");
+            }
         }
 
         if (this.collision == true) {
@@ -384,48 +367,97 @@ class World {
         noise.seed(Math.random());
         this.progress = 0.0;
 
-        var x = 0;
-        var z = 0;
-
         var t = this;
 
-        var fun = function() {
-            update();
-            t.generateChunk(x, z);
-            t.progress += 1.0 / (t.size * t.size);
-            x++;
-            if (x >= t.size) {
-                x = 0;
-                z++;
-                if (z >= t.size) {
-                    t.placePlayer();
-                    finish();
-                    return;
-                } 
+        var generate = function(generator, name, next) {
+            t.progress = 0;
+            var x = 0;
+            var z = 0;
+            var f = function() {
+                update(name);
+                generator(x, z);
+                t.progress += 1.0 / (t.size * t.size);
+                x++;
+                if (x >= t.size) {
+                    x = 0;
+                    z++;
+                    if (z >= t.size) {
+                        next();
+                        return;
+                    } 
+                }
+                requestAnimationFrame(f);
             }
-            requestAnimationFrame(fun);
-        };
+            requestAnimationFrame(f);
+        }
 
-        requestAnimationFrame(fun);
+        generate(t.generateChunkTerrain.bind(t), "Generating chunk terrain.",
+            function() {
+                generate(t.generateChunkCaves.bind(t), "Generating caves.",
+                    function() {
+                        generate(t.decorateChunk.bind(t), "Decorating chunks.", function() {
+                            t.placePlayer();
+                            finish();
+                        });
+                    });
+                });
     }
 
-    generateChunk(cx, cz) {
+    generateChunkTerrain(cx, cz) {
         const waterLevel = 49;
         for (var x = cx * this.cl; x < (cx + 1) * this.cl; x++) {
             for (var z = cz * this.cl; z < (cz + 1) * this.cl; z++) {
                 var h = Math.floor(50 + noise.simplex2(x / 50, z / 50) * 4);
                 for (var y = 0; y < this.worldHeight; y++) {
-                    var n3d = noise.simplex3(x/16, y/10, z/16) + (y / h) * 0.8;
-                    var block = "air"
-                    if (y == h) block = "grass";
-                    else if (y < h && y > h - 5) block = "dirt";
-                    else if (y <= h - 5) block = "stone";
-                    else if(y <= waterLevel) block = "water";
+                    var block;
+                    if (y <= h) block = "stone";
+                    else if (y <= waterLevel) block = "water"
+                    else block = "air"
 
-                    if (n3d < 0.2 && block != "water") block = "air";
+                    this.setBlock(x, y, z, block);
+                }
+            }
+        }
+    }
+
+    generateChunkCaves(cx, cz) {
+        for (var x = cx * this.cl; x < (cx + 1) * this.cl; x++) {
+            for (var z = cz * this.cl; z < (cz + 1) * this.cl; z++) {
+                for (var y = 0; y < this.worldHeight; y++) {
+                    var n3d = ((y / 65) + noise.simplex3(x/12, y/10, z/12) * 3 + noise.simplex3(x / 80, y / 20, z / 80) * 10) / 14;
+                    var block = this.getBlock(x, y, z).name;
+                    if (n3d < -0.5 && block == "stone") block = "air";
                     if (y== 0) block = "stone";
 
                     this.setBlock(x, y, z, block);
+                }
+            }
+        }
+    }
+
+    decorateChunk(cx, cz) {
+        const dirtLevel = 4;
+        for (var x = cx * this.cl; x < (cx + 1) * this.cl; x++) {
+            for (var z = cz * this.cl; z < (cz + 1) * this.cl; z++) {
+                var h = -1;
+                for (var y = this.worldHeight - 1; y >= 0; y--) {
+                    var block = this.getBlock(x, y, z).name;
+                    var sblock = block;
+                    var u = this.getBlock(x, y + 1, z).name;
+                    if (h == -1 && block == "stone") {
+                        if (u == "air") {
+                            sblock = "grass";
+                            h = y;
+                        }
+                        if (u == "water") {
+                            sblock = "dirt";
+                            h = y;
+                        }
+                    }
+                    if (u == "water" && block == "air") sblock = "water"
+                    else if (y >= h - dirtLevel && y < h) sblock = "dirt";
+
+                    this.setBlock(x, y, z, sblock);
                 }
             }
         }
@@ -440,6 +472,7 @@ class World {
     }
 
     updateChunk(x, y, z) {
+        if (x < 0 || x >= this.size || y < 0 || y >= this.height || z < 0 || z >= this.size) return;
         var chunk = this.chunks.get(this.chunkHash(x, y, z));
         if (chunk != null) {
             chunk.dirty = true;
@@ -456,6 +489,12 @@ class World {
         var cy = Math.floor(y / this.cl);
         var cz = Math.floor(z / this.cl);
         this.updateChunk(cx, cy, cz);
+        if (x % this.cl == 0) this.updateChunk(cx - 1, cy, cz);
+        if (y % this.cl == 0) this.updateChunk(cx, cy - 1, cz);
+        if (z % this.cl == 0) this.updateChunk(cx, cy, cz - 1);
+        if (x % this.cl - 1) this.updateChunk(cx + 1, cy, cz);
+        if (y % this.cl - 1) this.updateChunk(cx, cy + 1, cz);
+        if (z % this.cl - 1) this.updateChunk(cx, cy, cz + 1);
     }
 
     update(delta) {
@@ -476,6 +515,7 @@ class World {
     }
 }
 
+var rm = null;
 var world = null;
 
 function main() {
@@ -490,8 +530,8 @@ function main() {
     const size = parseInt(document.getElementById("world_size").value);
     world = new World(size, 8, render);
 
-    world.generateTerrain(function() {
-        gen_info.innerText = "Generating world.\nProgres: " + Math.floor(world.progress * 100) + "%.";
+    world.generateTerrain(function(info) {
+        gen_info.innerText = info + "\nProgres: " + Math.floor(world.progress * 100) + "%.";
     }, function() {
         gen_info.hidden = true;
         document.getElementById("glCanvas").hidden = false;

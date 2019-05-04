@@ -16,7 +16,9 @@ ay = my;
 dx = 0;
 dy = 0;
 mp = false;
+mrp = false;
 ms = 0;
+mrs = false;
 
 state = {}
 
@@ -57,6 +59,12 @@ class Input {
         } else {
             ms = 0;
         }
+
+        if (mrp) {
+            mrs = mrs == 0 ? 1 : -1;
+        } else {
+            mrs = 0;
+        }
     }
 
     static get mouseX() {
@@ -78,6 +86,10 @@ class Input {
     static get mousePressed() {
         return ms;
     }
+
+    static get mouseRightPressed() {
+        return mrs;
+    }
     
     static keydown(key) {
         state[key.keyCode] = true;
@@ -93,10 +105,12 @@ class Input {
     }
 
     static mousedown(mouse) {
-        if (mouse.buttons == 1) mp = true;
+        if (mouse.button == 0) mp = true;
+        if (mouse.button == 2) mrp = true;
     }
 
     static mouseup(mouse) {
-        if (mouse.buttons == 0) mp = false;
+        if (mouse.button == 0) mp = false;
+        if (mouse.button == 2) mrp = false;
     }
 };

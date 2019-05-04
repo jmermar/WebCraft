@@ -56,3 +56,41 @@ class Physics {
         else return b;
     }
 }
+
+class Raycast {
+    constructor(world, position, dir, max) {
+        this.world = world;
+        this.position = position.slice(0);
+        this.dir = new Array(3);
+        this.max = max;
+        vec3.normalize(this.dir, dir);
+    }
+
+    getBlock(step) {
+        var block = null;
+        var pos = this.position.slice();
+        var bx, by, bz;
+        var dir = new Array(3);
+        var newPos = new Array(3);
+        vec3.scale(dir, this.dir, step);
+        for(var i = 0; i < this.max; i += step) {
+            vec3.add(newPos, pos, dir);
+            bx = Math.floor(newPos[0]);
+            by = Math.floor(newPos[1]);
+            bz = Math.floor(newPos[2]);
+            block = world.getBlock(bx, by, bz);
+            if (!block.air) break;
+            pos = newPos.slice(0);
+        }
+
+        var nx = Math.floor(pos[0]) - bx;
+        var ny = Math.floor(pos[1]) - by;
+        var nz = Math.floor(pos[2]) - bz;
+
+        if (!block.air) return {
+            block: block,
+            position: [bx, by, bz],
+            normal: [nx, ny, nz],
+        }; else return null;
+    }
+}
