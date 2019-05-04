@@ -10,6 +10,7 @@ class Player {
         this.vspeed = 0.0;
         this.collision = true;
         this.movingCamera = false;
+        this.buildBlock = "grass";
 
         this.setGravityAndJump(1.2, 0.5);
     }
@@ -103,7 +104,7 @@ class Player {
                     block.position[0] + block.normal[0],
                     block.position[1] + block.normal[1],
                     block.position[2] + block.normal[2],
-                    "stone");
+                    this.buildBlock);
             }
         }
 
@@ -515,6 +516,34 @@ class World {
     }
 }
 
+var global = {
+    selector: ["grass", "dirt", "stone", "glass", "sand", "wood", "leaf", "snowgrass", "snow"],
+}
+
+function makeHud() {
+    const scale = 4;
+    const border = 4;
+    var selector = document.getElementById("selector");
+    selector.hidden = false;
+    for(var i = 0; i < global.selector.length; i++) {
+        var material = document.createElement("div");
+        material.block = world.blockMaps.get(global.selector[i]);
+        const coords = material.block.sides;
+        material.style.backgroundPosition = (-coords[0] * 16 * scale) + "px " + (-coords[1] * 16 * scale) + "px";
+        material.style.backgroundSize = 256 * scale + "px " + 256 * scale + "px";
+        material.style.height = 16 * scale + "px";
+        material.style.width = 16 * scale + "px";
+
+        material.onclick = function() {
+            world.player.buildBlock = this.block.name;
+        };
+        
+        selector.appendChild(material);
+    }
+    selector.style.padding = border + "px";
+    selector.style.marginLeft = (border + Math.floor(-global.selector.length * 16 * scale / 2)) + "px";
+}
+
 var rm = null;
 var world = null;
 
@@ -522,6 +551,7 @@ function main() {
     document.getElementById("main_menu").hidden = true;
     document.getElementById("gen_info").hidden = false;
     var gen_info = document.getElementById("gen_info");
+    var hud = document.getElementById("hud");
 
     var render = new Renderer();
     const maxFPS = 60;
@@ -533,9 +563,9 @@ function main() {
     world.generateTerrain(function(info) {
         gen_info.innerText = info + "\nProgres: " + Math.floor(world.progress * 100) + "%.";
     }, function() {
+        makeHud();
         gen_info.hidden = true;
         document.getElementById("glCanvas").hidden = false;
-        world.generateBor
         world.autoLoadChunks();
         var last = Date.now();
 

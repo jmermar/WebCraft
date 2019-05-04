@@ -38,9 +38,9 @@ blocks = [
     },
     {
         name: "snow",
-        top: [0, 3],
-        bottom: [0, 3],
-        sides: [0, 3],
+        top: [2, 3],
+        bottom: [2, 3],
+        sides: [2, 3],
     },
     {
         name: "stone",
@@ -50,9 +50,9 @@ blocks = [
     },
     {
         name: "sand",
-        top: [3, 0],
-        bottom: [3, 0],
-        sides: [3, 0],
+        top: [2, 0],
+        bottom: [2, 0],
+        sides: [2, 0],
     },
     {
         name: "glass",
@@ -61,4 +61,16 @@ blocks = [
         sides: [0, 2],
         transparent: true,
     },
+    {
+        name: "wood",
+        top: [1, 1],
+        bottom: [1, 1],
+        sides: [0, 1],
+    },
+    {
+        name: "leaf",
+        top: [2, 1],
+        bottom: [2, 1],
+        sides: [2, 1],
+    }
 ];
