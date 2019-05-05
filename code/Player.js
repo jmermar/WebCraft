@@ -118,6 +118,7 @@ class Player {
     }
 
     updatePhysics(delta) {
+        this.checkWater();
         var angle = this.rotation[1];
         var angle = this.rotation[1];
         var ix = 0;
@@ -144,14 +145,35 @@ class Player {
             ix -= Math.cos(glMatrix.toRadian(angle)) * delta * this.speed;
         }
 
+        var gravityScale = 1.0;
 
-
-        this.vspeed -= this.gravity * delta;
-        if (input.keypress("jump") && this.ground) {
-            this.vspeed = this.jumpSpeed;
+        if (!this.onWater) {
+            if (input.keypress("jump") && this.ground) {
+                this.vspeed = this.jumpSpeed;
+            }
+        } else {
+            if (input.keypress("jump") && this.canSwim) {
+                this.vspeed = this.jumpSpeed / 3;
+            }
+            gravityScale = 0.25;
         }
-        iy += this.vspeed * delta;
+        this.vspeed -= this.gravity * gravityScale * delta;
 
+        iy += this.vspeed * delta;
+        this.movePlayer(ix, iy, iz);
+    }
+
+    checkWater() {
+        var result = Physics.collision(this.collbox, this.world);
+        this.onWater = result.water;
+
+        var upperColl = this.collbox;
+        upperColl.size[1] /= 6;
+        upperColl.position[1] += upperColl.size[1];
+        this.canSwim = Physics.collision(upperColl, this.world).water;
+    }
+
+    movePlayer(ix, iy, iz) {
         var ignoreBlocks = Physics.collision(this.collbox, this.world).blocks;
         //Move y
         if (iy != 0) {

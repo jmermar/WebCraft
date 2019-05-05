@@ -358,9 +358,11 @@ class World {
             if (this.getBlock(x, y, z - 1).air) this.setBlock(x, y, z - 1, "water", true);
             if (this.getBlock(x, y, z + 1).air) this.setBlock(x, y, z + 1, "water", true);
         } else if (block.name == "grass") {
-            if (!this.getBlock(x, y + 1, z).transparent) this.setBlock(x, y, z, "dirt", true);
+            var ublock = this.getBlock(x, y + 1, z);
+            if (!ublock.transparent || ublock.name == "water") this.setBlock(x, y, z, "dirt", true);
         } else if (block.name == "dirt") {
-            if (this.getBlock(x, y + 1, z).transparent) {
+            var ublock = this.getBlock(x, y + 1, z);
+            if (ublock.transparent && ublock.name != "water") {
                 for (var i = y - 1; i <= y + 1; i++) {
                     var b1 = this.getBlock(x - 1, i, z).name;
                     var b2 = this.getBlock(x + 1, i, z).name;

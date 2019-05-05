@@ -16,6 +16,7 @@ class Physics {
         var minZ = null;
 
         var b = new Set();
+        var water = false;
 
         for(var x = sx; x <= ex; x++) {
             for(var y = sy; y <= ey; y++) {
@@ -29,6 +30,8 @@ class Physics {
                         maxZ = this.max(z + 1, maxZ);
                         minZ = this.min(z, minZ);
                         b.add([x, y, z].join(","));
+                    } else if (world.getBlock(x, y, z).name == "water") {
+                        water = true;
                     }
                 }
             }
@@ -39,6 +42,7 @@ class Physics {
             max: [maxX, maxY, maxZ],
             min: [minX, minY, minZ],
             blocks: b,
+            water: water,
         }
     }
 
