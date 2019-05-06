@@ -93,7 +93,13 @@ class Renderer {
         var chunk = this.chunkMeshes.get(hash);
 
         if (chunk != null) {
-            rm.freeMesh(hash);
+            if (chunk.block_mesh != null) {
+                rm.freeMesh(hash + "_bm");
+            }
+
+            if (chunk.water_mesh != null) {
+                rm.freeMesh(hash + "_wm");
+            }
         }
 
         this.chunkMeshes.delete(hash)
@@ -102,13 +108,19 @@ class Renderer {
     generateChunkMesh(world, position) {
         const hash = world.chunkHash(position[0], position[1], position[2]);
         var chunk = this.chunkMeshes.get(hash);
-        if (chunk != undefined ) {
-            rm.freeMesh(hash);
-        }
+        this.freeChunk(hash);
 
-        var vertex = [];
-        var indices = [];
-        var coords = [];
+        var blocks = {
+            vertex: [],
+            indices: [],
+            coords: [],
+        };
+
+        var water = {
+            vertex: [],
+            indices: [],
+            coords: [],
+        };
 
         for(var x = 0; x < world.cl; x++) {
             for(var y = 0; y < world.cl; y++) {
@@ -118,29 +130,33 @@ class Renderer {
                     var bz = z + position[2] * world.cl;
                     var block = world.getBlock(bx, by, bz);
 
-                    var addFace = function(face, coord, normal) {
-                        var idx = Math.floor(vertex.length / 6);
+                    var addFace = function(face, coord, normal, m) {
+                        var idx = Math.floor(m.vertex.length / 6);
 
                         for(var i = 0; i < 4; i++) {
-                            vertex.push(x + face[0 + i * 3]);
-                            vertex.push(y + face[1 + i * 3]);
-                            vertex.push(z + face[2 + i * 3]);
-                            vertex.push(normal[0]);
-                            vertex.push(normal[1]);
-                            vertex.push(normal[2]);
+                            m.vertex.push(x + face[0 + i * 3]);
+                            m.vertex.push(y + face[1 + i * 3]);
+                            m.vertex.push(z + face[2 + i * 3]);
+                            m.vertex.push(normal[0]);
+                            m.vertex.push(normal[1]);
+                            m.vertex.push(normal[2]);
                         }
-                        indices.push(idx); indices.push(idx + 1); indices.push(idx + 2);
-                        indices.push(idx); indices.push(idx + 2); indices.push(idx + 3);
+                        m.indices.push(idx); m.indices.push(idx + 1); m.indices.push(idx + 2);
+                        m.indices.push(idx); m.indices.push(idx + 2); m.indices.push(idx + 3);
 
                         var rc = [coord[0] / 16, coord[1] / 16, (coord[0] + 1) / 16, (coord[1] + 1) / 16];
 
-                        coords.push(rc[0]);  coords.push(rc[1]);
-                        coords.push(rc[2]);  coords.push(rc[1]);
-                        coords.push(rc[2]);  coords.push(rc[3]);
-                        coords.push(rc[0]);  coords.push(rc[3]);
+                        m.coords.push(rc[0]);  m.coords.push(rc[1]);
+                        m.coords.push(rc[2]);  m.coords.push(rc[1]);
+                        m.coords.push(rc[2]);  m.coords.push(rc[3]);
+                        m.coords.push(rc[0]);  m.coords.push(rc[3]);
                     }
                     
                     if (!block.air) {
+                        var which = blocks;
+
+                        if (block.name == "water") which = water;
+
                         var condition = null;
                         if (block.transparent) {
                             condition = function(ablock) { 
@@ -158,7 +174,7 @@ class Renderer {
                                 0, 1, 0,
                                 0, 0, 0,
                                 0, 0, 1,
-                            ], block.sides, [-1, 0, 0]);
+                            ], block.sides, [-1, 0, 0], which);
                         }
 
                         if (condition(world.getBlock(bx + 1, by, bz))) {
@@ -167,7 +183,7 @@ class Renderer {
                                 1, 1, 1,
                                 1, 0, 1,
                                 1, 0, 0
-                            ], block.sides, [+1, 0, 0]);
+                            ], block.sides, [+1, 0, 0], which);
                         }
 
                         if (condition(world.getBlock(bx, by, bz - 1))) {
@@ -176,7 +192,7 @@ class Renderer {
                                 1, 1, 0,
                                 1, 0, 0,
                                 0, 0, 0
-                            ], block.sides, [0, 0, -1]);
+                            ], block.sides, [0, 0, -1], which);
                         }
 
                         if (condition(world.getBlock(bx, by, bz + 1))) {
@@ -185,7 +201,7 @@ class Renderer {
                                 0, 1, 1,
                                 0, 0, 1,
                                 1, 0, 1,
-                            ], block.sides, [0, 0, 1]);
+                            ], block.sides, [0, 0, 1], which);
                         }
 
                         if (condition(world.getBlock(bx, by + 1, bz))) {
@@ -194,7 +210,7 @@ class Renderer {
                                 1, 1, 1,
                                 1, 1, 0,
                                 0, 1, 0,
-                            ], block.top, [0, 1, 0]);
+                            ], block.top, [0, 1, 0], which);
                         }
 
                         if (condition(world.getBlock(bx, by - 1, bz))) {
@@ -203,28 +219,36 @@ class Renderer {
                                1, 0, 0,
                                1, 0, 1,
                                0, 0, 1,
-                            ], block.bottom, [0, -1, 0]);
+                            ], block.bottom, [0, -1, 0], which);
                         }
                     }
                 }
             }
         }
 
-        var data = {
-            vertex: vertex,
-            indices: indices,
-            coords: coords,
+        var block_mesh = null;
+        var water_mesh = null;
+
+        if (blocks.indices.length > 0) {
+            block_mesh = rm.createMesh(hash + "_bm", blocks);
         }
 
-        if (indices.length == 0) return;
+        if (water.indices.length > 0) {
+            water_mesh = rm.createMesh(hash + "_wm", water);
+        }
+
+        if (block_mesh == null && water_mesh == null) {
+            return;
+        }
 
         var model = new Float32Array(16);
         mat4.identity(model);
 
         mat4.translate(model, model, [position[0] * world.cl, position[1] * world.cl, position[2] * world.cl]);
-        this.chunkMeshes.set(world.chunkHash(position[0], position[1], position[2]), {
+        this.chunkMeshes.set(hash,  {
             model : model,
-            mesh : rm.createMesh(hash, data),
+            block_mesh : block_mesh,
+            water_mesh: water_mesh,
         });
     }
 
@@ -267,6 +291,8 @@ class Renderer {
             || this.canvas.height != window.innerHeight)
             this.resizeCanvas(window.innerWidth, window.innerHeight);
         this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+        this.gl.disable(this.gl.BLEND);
+        this.gl.enable(this.gl.CULL_FACE);
 
         this.shader.bind();
 
@@ -277,11 +303,13 @@ class Renderer {
         this.altas.bind();
         var rnd = this;
         this.chunkMeshes.forEach(function(value, key, map) {
-            rnd.gl.uniformMatrix4fv(rnd.mUniform, false, value.model);
-            var mesh = value.mesh;
-            mesh.bind();
-            mesh.draw();
-            mesh.unbind();
+            var mesh = value.block_mesh;
+            if (mesh) {
+                rnd.gl.uniformMatrix4fv(rnd.mUniform, false, value.model);
+                mesh.bind();
+                mesh.draw();
+                mesh.unbind();
+            }
         });
 
         this.altas.unbind();
@@ -296,6 +324,19 @@ class Renderer {
             value.mesh.unbind();
             value.tex.unbind();
         });
+
+        this.gl.disable(this.gl.CULL_FACE);
+        this.altas.bind();
+        this.chunkMeshes.forEach(function(value, key, map) {
+            var mesh = value.water_mesh;
+            if (mesh) {
+                rnd.gl.uniformMatrix4fv(rnd.mUniform, false, value.model);
+                mesh.bind();
+                mesh.draw();
+                mesh.unbind();
+            }
+        });
+        this.altas.unbind();
 
         this.shader.unbind();
     }

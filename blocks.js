@@ -15,6 +15,25 @@ blocks = [
         top:    [0, 0],
         bottom: [0, 0],
         sides:  [0, 0],
+        refresh: function(world, x, y, z) {
+            var ublock = world.getBlock(x, y + 1, z);
+            if (ublock.transparent && ublock.name != "water") {
+                for (var i = y - 1; i <= y + 1; i++) {
+                    var b1 = world.getBlock(x - 1, i, z).name;
+                    var b2 = world.getBlock(x + 1, i, z).name;
+                    var b3 = world.getBlock(x, i, z + 1).name;
+                    var b4 = world.getBlock(x, i, z - 1).name;
+    
+                    if (b1 == "grass"
+                        || b2 == "grass"
+                        || b3 == "grass"
+                        || b4 == "grass") {
+                        world.setBlock(x, y, z, "grass", true);
+                        break;
+                    }
+                }
+            }
+        }
     },
     {
         name: "water",
@@ -23,12 +42,23 @@ blocks = [
         top:    [3, 0],
         bottom: [3, 0],
         sides:  [3, 0],
+        refresh: function(world, x, y, z) {
+            if (world.getBlock(x - 1, y, z).air) world.setBlock(x - 1, y, z, "water", true);
+            if (world.getBlock(x + 1, y, z).air) world.setBlock(x + 1, y, z, "water", true);
+            if (world.getBlock(x, y - 1, z).air) world.setBlock(x, y - 1, z, "water", true);
+            if (world.getBlock(x, y, z - 1).air) world.setBlock(x, y, z - 1, "water", true);
+            if (world.getBlock(x, y, z + 1).air) world.setBlock(x, y, z + 1, "water", true);
+        }
     },
     {
         name: "grass",
         top:    [0, 3],
         bottom: [0, 0],
         sides:  [1, 3],
+        refresh: function(world, x, y, z) {
+            var ublock = world.getBlock(x, y + 1, z);
+            if (!ublock.transparent || ublock.name == "water") world.setBlock(x, y, z, "dirt", true);
+        }
     },
     {
         name: "snowgrass",
@@ -53,6 +83,12 @@ blocks = [
         top:    [2, 0],
         bottom: [2, 0],
         sides:  [2, 0],
+        refresh: function(world, x, y, z) {
+            if (world.getBlock(x, y - 1, z).nocoll) {
+                world.setBlock(x, y, z, "air", true);
+                world.setBlock(x, y - 1, z, "sand", true);
+            }
+        }
     },
     {
         name: "glass",

@@ -23,6 +23,7 @@ class World {
         this.chunks = new Map();
 
         this.refresh = new Array();
+        this.nextRefresh = new Array();
 
         this.createBorders();
     }
@@ -243,7 +244,10 @@ class World {
         const waterLevel = 49;
         for (var x = cx * this.cl; x < (cx + 1) * this.cl; x++) {
             for (var z = cz * this.cl; z < (cz + 1) * this.cl; z++) {
-                var h = Math.floor(50 + noise.simplex2(x / 50, z / 50) * 4);
+                var dx = ((this.worldLength / 2) -  x) / (this.worldLength / 2);
+                var dz = ((this.worldLength / 2) -  z) / (this.worldLength / 2);
+                var d = Math.sqrt(dx*dx+dz*dz);
+                var h = Math.floor(53 + noise.simplex2(x / 50, z / 50) * 6) - d * d * 7;
                 for (var y = 0; y < this.worldHeight; y++) {
                     var block;
                     if (y <= h) block = "stone";
@@ -332,62 +336,19 @@ class World {
         if (y % this.cl - 1) this.updateChunk(cx, cy + 1, cz);
         if (z % this.cl - 1) this.updateChunk(cx, cy, cz + 1);
         if (refresh) {
-            this.refresh.push([x, y, z]);
-            this.refresh.push([x - 1, y, z]);
-            this.refresh.push([x, y - 1, z]);
-            this.refresh.push([x, y, z - 1]);
-            this.refresh.push([x + 1, y, z]);
-            this.refresh.push([x, y + 1, z]);
-            this.refresh.push([x, y, z + 1]);
+            this.nextRefresh.push([x, y, z]);
+            this.nextRefresh.push([x - 1, y, z]);
+            this.nextRefresh.push([x, y - 1, z]);
+            this.nextRefresh.push([x, y, z - 1]);
+            this.nextRefresh.push([x + 1, y, z]);
+            this.nextRefresh.push([x, y + 1, z]);
+            this.nextRefresh.push([x, y, z + 1]);
         }
     }
 
     refreshBlock(x, y, z) {
         var block = this.getBlock(x, y, z);
-        if (block.name == "sand") {
-            if (this.getBlock(x, y - 1, z).nocoll) {
-                var ny = y - 1;
-                while(this.getBlock(x, ny - 1, z).nocoll) ny--;
-                this.setBlock(x, y, z, "air", true);
-                this.setBlock(x, ny, z, "sand", true);
-            }
-        } else if (block.name == "water") {
-            if (this.getBlock(x - 1, y, z).air) this.setBlock(x - 1, y, z, "water", true);
-            if (this.getBlock(x + 1, y, z).air) this.setBlock(x + 1, y, z, "water", true);
-            if (this.getBlock(x, y - 1, z).air) this.setBlock(x, y - 1, z, "water", true);
-            if (this.getBlock(x, y, z - 1).air) this.setBlock(x, y, z - 1, "water", true);
-            if (this.getBlock(x, y, z + 1).air) this.setBlock(x, y, z + 1, "water", true);
-        } else if (block.name == "grass") {
-            var ublock = this.getBlock(x, y + 1, z);
-            if (!ublock.transparent || ublock.name == "water") this.setBlock(x, y, z, "dirt", true);
-        } else if (block.name == "dirt") {
-            var ublock = this.getBlock(x, y + 1, z);
-            if (ublock.transparent && ublock.name != "water") {
-                for (var i = y - 1; i <= y + 1; i++) {
-                    var b1 = this.getBlock(x - 1, i, z).name;
-                    var b2 = this.getBlock(x + 1, i, z).name;
-                    var b3 = this.getBlock(x, i, z + 1).name;
-                    var b4 = this.getBlock(x, i, z - 1).name;
-    
-                    if (b1 == "grass") {
-                        this.setBlock(x, y, z, "grass", true);
-                        break;
-                    }
-                    if (b2 == "grass") {
-                        this.setBlock(x, y, z, "grass", true);
-                        break;
-                    }
-                    if (b3 == "grass") {
-                        this.setBlock(x, y, z, "grass", true);
-                        break;
-                    }
-                    if (b4 == "grass") {
-                        this.setBlock(x, y, z, "grass", true);
-                        break;
-                    }
-                }
-            }
-        }
+        if(block.refresh != null) block.refresh(this, x, y, z);
     }
 
     updateBlock(x, y, z) {
@@ -432,13 +393,15 @@ class World {
             update = false;
             this.updateWait = 0;
         }
-        var r = this.refresh;
-        this.refresh = [];
-        if (r.length > 0) {
-            r.forEach(function(val) {
+        var nr = this.nextRefresh;
+        this.nextRefresh = [];
+        if (t.refresh.length > 0) {
+            t.refresh.forEach(function(val) {
                 t.refreshBlock(val[0], val[1], val[2]);
             });
         }
+
+        this.refresh = nr;
 
         this.chunks.forEach(function(value, key, map) {
             if (update) {
