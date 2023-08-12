@@ -2,6 +2,7 @@ export default {
   world: null,
   input: null,
   rm: null,
+  gl: null,
   selector: [
     "dirt",
     "stone",
@@ -13,4 +14,5 @@ export default {
     "planks",
     "water",
   ],
+  canvas: null,
 };

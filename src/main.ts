@@ -1,16 +1,23 @@
 import { World } from "./World.js";
-import { Renderer } from "./Renderer.js";
+import { Renderer } from "./rendering/Renderer.js";
 import { Input } from "./Input.js";
 import { GUI } from "./GUI.js";
 import { ResourceManager } from "./ResourceManager.js";
 import global from "./global.js";
 
+global.canvas = document.getElementById(
+  "glCanvas"
+) as unknown as HTMLCanvasElement;
+
+global.gl = global.canvas.getContext("webgl2");
+if (global.gl == null) {
+  alert("Cannot use webgl");
+}
+
 async function main() {
-  global.rm = new ResourceManager();
-
-  await global.rm.loadImages();
-
   GUI.setGenInfo();
+  global.rm = new ResourceManager();
+  await global.rm.loadImages();
   var render = new Renderer();
   const maxFPS = 60;
   global.input = new Input();

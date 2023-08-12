@@ -1,25 +1,15 @@
-import global from "./global.js";
+import global from "../global.js";
+
+import { mat4, vec4, glMatrix } from "gl-matrix";
 
 import basic_vertex from "./shaders/basic_vertex.glsl";
 import basic_fragment from "./shaders/basic_fragment.glsl";
-
-import { mat4, vec4, glMatrix } from "gl-matrix";
 
 export class Renderer {
   constructor() {
     this.chunkMeshes = new Map();
 
     this.models = new Map();
-
-    this.canvas = document.getElementById("glCanvas");
-
-    this.gl = this.canvas.getContext("webgl2");
-    if (this.gl == null) {
-      alert("Cannot use webgl");
-      return;
-    }
-
-    global.rm.gl = this.gl;
 
     this.altas = global.rm.getTexture("atlas");
 
@@ -32,12 +22,12 @@ export class Renderer {
     this.vUniform = this.shader.getUniform("viewMatrix");
     this.pUniform = this.shader.getUniform("projMatrix");
 
-    this.gl.enable(this.gl.DEPTH_TEST);
-    this.gl.enable(this.gl.CULL_FACE);
-    this.gl.enable(this.gl.SAMPLE_ALPHA_TO_COVERAGE);
-    this.gl.sampleCoverage(0.9, false);
-    this.gl.frontFace(this.gl.CW);
-    this.gl.cullFace(this.gl.FRONT);
+    global.gl.enable(global.gl.DEPTH_TEST);
+    global.gl.enable(global.gl.CULL_FACE);
+    global.gl.enable(global.gl.SAMPLE_ALPHA_TO_COVERAGE);
+    global.gl.sampleCoverage(0.9, false);
+    global.gl.frontFace(global.gl.CW);
+    global.gl.cullFace(global.gl.FRONT);
 
     this.pMatrix = new Float32Array(16);
     this.mvMatrix = new Float32Array(16);
@@ -49,7 +39,7 @@ export class Renderer {
   }
 
   get opengl() {
-    return this.gl;
+    return global.gl;
   }
 
   loadModel(name, texture, data) {
@@ -112,7 +102,7 @@ export class Renderer {
   }
 
   clearColor(red, green, blue) {
-    this.gl.clearColor(red, green, blue, 1.0);
+    global.gl.clearColor(red, green, blue, 1.0);
   }
 
   freeChunk(hash) {
@@ -298,9 +288,9 @@ export class Renderer {
   resizeCanvas(w, h) {
     mat4.perspective(this.pMatrix, glMatrix.toRadian(90), w / h, 0.1, 1000);
 
-    this.canvas.width = w;
-    this.canvas.height = h;
-    this.gl.viewport(0, 0, w, h);
+    global.canvas.width = w;
+    global.canvas.height = h;
+    global.gl.viewport(0, 0, w, h);
   }
 
   setCam(position, rotation) {
@@ -336,8 +326,8 @@ export class Renderer {
 
   screenToWorld(x, y) {
     var vec = [
-      2 * (x / this.canvas.width) - 1,
-      2 * -(y / this.canvas.height) + 1,
+      2 * (x / global.canvas.width) - 1,
+      2 * -(y / global.canvas.height) + 1,
       0,
       1.0,
     ];
@@ -348,18 +338,18 @@ export class Renderer {
 
   render() {
     if (
-      this.canvas.width != window.innerWidth ||
-      this.canvas.height != window.innerHeight
+      global.canvas.width != window.innerWidth ||
+      global.canvas.height != window.innerHeight
     )
       this.resizeCanvas(window.innerWidth, window.innerHeight);
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-    this.gl.disable(this.gl.BLEND);
-    this.gl.enable(this.gl.CULL_FACE);
+    global.gl.clear(global.gl.COLOR_BUFFER_BIT | global.gl.DEPTH_BUFFER_BIT);
+    global.gl.disable(global.gl.BLEND);
+    global.gl.enable(global.gl.CULL_FACE);
 
     this.shader.bind();
 
-    this.gl.uniformMatrix4fv(this.pUniform, false, this.pMatrix);
-    this.gl.uniformMatrix4fv(this.vUniform, false, this.vMatrix);
+    global.gl.uniformMatrix4fv(this.pUniform, false, this.pMatrix);
+    global.gl.uniformMatrix4fv(this.vUniform, false, this.vMatrix);
 
     //Draw chunks
     this.altas.bind();
@@ -367,7 +357,7 @@ export class Renderer {
     this.chunkMeshes.forEach(function (value, key, map) {
       var mesh = value.block_mesh;
       if (mesh) {
-        rnd.gl.uniformMatrix4fv(rnd.mUniform, false, value.model);
+        global.gl.uniformMatrix4fv(rnd.mUniform, false, value.model);
         mesh.bind();
         mesh.draw();
         mesh.unbind();
@@ -380,19 +370,19 @@ export class Renderer {
       value.tex.bind();
       value.mesh.bind();
       value.instances.forEach(function (ins) {
-        rnd.gl.uniformMatrix4fv(rnd.mUniform, false, ins.matrix);
+        global.gl.uniformMatrix4fv(rnd.mUniform, false, ins.matrix);
         value.mesh.draw();
       });
       value.mesh.unbind();
       value.tex.unbind();
     });
 
-    this.gl.disable(this.gl.CULL_FACE);
+    global.gl.disable(global.gl.CULL_FACE);
     this.altas.bind();
     this.chunkMeshes.forEach(function (value, key, map) {
       var mesh = value.water_mesh;
       if (mesh) {
-        rnd.gl.uniformMatrix4fv(rnd.mUniform, false, value.model);
+        global.gl.uniformMatrix4fv(rnd.mUniform, false, value.model);
         mesh.bind();
         mesh.draw();
         mesh.unbind();
