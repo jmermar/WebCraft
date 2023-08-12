@@ -5,10 +5,15 @@ I didn't updated the project for a long time, excep for refactoring it in order 
 
 Currently it support the next features:
 
-- Perlin noise for world generation.
+- 2d perlin noise for world generation.
+- Cave generation by using 3d perlin noise.
 - Player physics with the blocks.
 - Block placement and removing.
 - Simple block physics for water and sand (much like old minecraft classic).
+
+| Building support by using various blocks | Cave generation |
+| - | - |
+|![screenshot of the game](screenshot1.png)| ![screenshot of the game](screenshot2.png)|
 
 Controls:
 
@@ -22,12 +27,11 @@ Controls:
 
 ## Play remotely
 
-You can play the game in any browser in [this url](https://jmermar.github.io/NTImp.github.io/webcraft/index.html).
+Recently I've posted the game in https://jo65.itch.io/webcraft acoount so it can be played without downloading.
 
 ## Run locally
 
-This is built using webpack, so, in order to run the program locally you must first clone this repository,
-and once cloned, run the following commands in the project folder (assuming you have npm installed):
+This project have been built using webpack, so in order to run the game locally you must first clone this repository and once cloned, run the following commands in the project folder (assuming you have npm installed):
 
 ```{bash}
 npm i
@@ -40,4 +44,4 @@ Once you have built it you will need a static server running so the browser can 
 npm run up
 ```
 
-And then you will be able to play in your browser by going to localhost:8080.
+And then you will be able to play in your browser by going to http://localhost:8080.
