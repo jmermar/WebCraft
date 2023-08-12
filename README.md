@@ -27,7 +27,7 @@ Controls:
 
 ## Play remotely
 
-Recently I've posted the game in https://jo65.itch.io/webcraft acoount so it can be played without downloading.
+Recently I've posted the game in https://jo65.itch.io/webcraft so it can be played without downloading.
 
 ## Run locally
 
